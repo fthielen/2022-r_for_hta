@@ -1,0 +1,61 @@
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{lastpage}
+
+% For landscape
+% https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf
+\usepackage{lscape}
+\newcommand{\blandscape}{\begin{landscape}}
+\newcommand{\elandscape}{\end{landscape}}
+
+% Extra symbols like (R)
+\usepackage{textcomp}
+
+% Package to avoid 'Chapter' part for each chapter
+% https://stackoverflow.com/questions/48271693/r-removing-the-chapter-part-from-the-title-in-bookdownpdf-book-with-documen
+\usepackage{titlesec}
+\titleformat{\chapter}
+{\normalfont\LARGE\bfseries}{\thechapter}{1em}{}
+\titlespacing*{\chapter}{0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}
+
+% Package to keep figures in place
+\usepackage{float}
+\floatplacement{figure}{H}
+
+\usepackage{fixltx2e}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}% Clear header and footer
+\setlength{\headheight}{14.5pt}
+\renewcommand{\footrulewidth}{0.4pt}% Line at the footer visible
+\renewcommand{\chaptermark}[1]{%
+        \markboth{#1}{}}
+                \fancyhead[L]{Using bookdown with R for HTA}
+                \fancyhead[R]{}
+                \fancyfoot[L]{Tutorial code from Alvarez and Ribero}
+                \fancyfoot[C]{}
+                \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+                \usepackage{etoolbox}
+                \patchcmd{\chapter}{\thispagestyle{plain}}{\thispagestyle{fancy}}{}{}
+                %     % Redefine the plain page style
+                %     \pagestyle{plain}{%
+                        %       \fancyhf{}%
+                        %       \fancyfoot[C]{\thepage\ of \pageref{LastPage}}%
+                        %       \renewcommand{\headrulewidth}{0pt}% Line at the header invisible
+                %       \renewcommand{\footrulewidth}{0.4pt}% Line at the footer visible
+                % }
+
+        \ifxetex
+        \usepackage{letltxmacro}
+        \setlength{\XeTeXLinkMargin}{1pt}
+        \LetLtxMacro\SavedIncludeGraphics\includegraphics
+        \def\includegraphics#1#{% #1 catches optional stuff (star/opt. arg.)
+        \IncludeGraphicsAux{#1}%
+        }%
+        \newcommand*{\IncludeGraphicsAux}[2]{%
+                \XeTeXLinkBox{%
+                        \SavedIncludeGraphics#1{#2}%
+                }%
+        }%
+        \fi

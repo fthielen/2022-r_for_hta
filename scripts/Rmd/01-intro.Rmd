@@ -1,0 +1,53 @@
+# Introduction {#intro}
+
+This document runs a discrete event simulation model in the context of early breast cancer to show how the functions can be used to generate a model in only a few steps.
+
+When running a DES, it’s important to consider speed. Simulation based models can be computationally expensive, which means that using efficient coding can have a substantial impact on performance. Because the model is using parallel computing, in order to debug the model one can simply use browser() where needed and set the number of patients to be simulated equal to 1.
+
+## Main options
+```{r echo=TRUE}
+
+# The following was adapted from the original code because the github
+# path and names changed
+# devtools::install_github("Roche/descem")
+
+library(descem)
+
+library(dplyr)
+ 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
+library(flexsurv)
+#> Loading required package: survival
+library(ggplot2)
+library(kableExtra)
+#> 
+#> Attaching package: 'kableExtra'
+#> The following object is masked from 'package:dplyr':
+#> 
+#>     group_rows
+library(purrr)
+#> 
+#> Attaching package: 'purrr'
+#> The following object is masked from '.my.env':
+#> 
+#>     keep
+library(tidyr)
+
+# Additional packages ----
+library("bookdown")
+
+# Write citations from packages
+knitr::write_bib(file = here::here("references/packages.bib"))
+
+```
+
+```{r echo=TRUE}
+options(scipen = 999)
+options(tibble.print_max = 50)
+```

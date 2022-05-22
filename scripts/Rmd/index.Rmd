@@ -1,0 +1,87 @@
+---
+title: "Writing technical reports of any economic analysis in R with **bookdown**"
+subtitle: "A short tutorial for *R for HTA* using a tutorial by Alvarez and Ribero"
+author: "FW Thielen"
+date: "`r Sys.Date()`"
+subparagraph: true
+output: 
+  bookdown::pdf_book:
+    extra_dependencies: ["float"]
+    includes:
+      in_header: preamble.tex
+    toc: true
+    toc_depth: 4
+site: bookdown::bookdown_site
+documentclass: report
+fontsize: 12pt
+geometry: "left=3cm, right=3cm, top=2.5cm, bottom=2.5cm"
+bibliography: ["references/zotero.bib", "references/packages.bib"]
+biblio-style: "numeric"
+csl: [references/nature.csl]
+link-citations: yes
+Description: "DRAFT"
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+
+# General R session settings
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE) # for all subsequent chunks
+```
+
+# Preface {-}
+
+This book was created to demonstrate how the online "Tutorial to Create a
+Discrete Event Simulation Model in R Using descem", written by *Javier Sanchez Alvarez*
+and *Valerie Aponte Ribero* and published on [**R for HTA**](https://r-hta.org/tutorial/descem/) can be converted into a **bookdown**
+report/book.[@bookdown2016]
+
+This report, together with its code can be found on [github](https://github.com/fthielen/2022-r_for_hta) and was written for the
+*R for HTA workshop* on Thursday 19th, Friday 20th, and Monday 23rd May 2022.
+It is part of the presentation on Monday 23rd May 2022: "Copy and paste code,
+not output. Writing technical reports of any economic analysis in R with Bookdown"
+and "Estimating Dutch costs of productivity losses in R using up-to-date data
+from Statistics Netherlands (CBS) with the R-package cbsodataR". More on
+costs of producitivty losses can be found in Krol and Brouwer (2014).[@krol2014]
+
+## Setup {-}
+The following R-code chunk is only visible in the `index.Rmd` file, unless the
+chunk option `echo` is set to `TRUE`.
+
+This chunk also controls the options for all other chunks in the document. These
+options can be overruled in each chunk separately.
+
+Be aware that options like `warnings = FALSE` can be undesirable and should be
+used with caution.
+
+```{r chunk-opts, echo=FALSE, message=FALSE, warning=FALSE}
+
+# General R session settings
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE) # for all subsequent chunks
+```
+
+## Other {-}
+
+The standard approach of **bookdown** is to first merge all `.Rmd` files you
+specified in the `_bookdown.yml` file. After that, these files are rendered.
+Therefore, all object used in later chapter need to be created somewhere in a
+previous one.
+
+Rmarkdowns behave as they usually do:
+
+- One `#` is for first level headings
+- Two `##` is for second level headings, and so on
+- A `{-}` after a heading means that it is not automatically numbered
+
+You can render this book either:
+
+- as a PDF file with: 
+```{r eval-pdf, eval=F}
+bookdown::render_book(here::here("scripts/Rmd/index.Rmd"),
+                      output_format = "bookdown::pdf_book")
+```
+- or as a HTML file with:
+```{r eval-html, eval=F}
+bookdown::render_book(here::here("scripts/Rmd/index.Rmd"),
+                      output_format = "bookdown::gitbook")
+```
+

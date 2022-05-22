@@ -1,0 +1,167 @@
+# Events
+
+## Add Initial Events
+Events are added below through the `add_tte` function. We use this function twice, one per intervention. We must define several arguments: one to indicate the intervention, one to define the names of the events used, one to define the names of other objects created that we would like to store (optional, maybe we generate an intermediate input which is not an event but that we want to save) and the actual input in which we generate the time to event. Events and other objects will be automatically initialized to `Inf`. We draw the times to event for the patients. This chunk is a bit more complex, so it’s worth spending a bit of time explaining it.
+
+The `init_event_list` object is populated by using the `add_tte` function twice, one for the “int” strategy and other for the “noint” strategy. We first declare the `start` time to be `0`.
+
+We then proceed to generate the actual time to event. We use the `draw_tte()` function to generate the time to event. One should always be aware of how the competing risks interact with each other. While we have abstracted from these type of corrections here, it is recommended to have an understanding about how these affect the results and have a look at the competing risks/semi-competing risks literature.
+
+```{r}
+init_event_list <- 
+  add_tte(trt="noint", evts = c("sick","sicker","death") ,input={ #intervention
+    sick <- 0
+    sicker <- draw_tte(1,dist="exp", coef1=coef_noint)
+    
+  }) %>%  add_tte(trt="int", evts = c("sick","sicker","death") ,input={  
+    sick <- 0
+    sicker <- draw_tte(1,dist="exp", coef1=coef_noint, hr = HR_int)
+
+  })
+```
+
+## Add Reaction to Those Events
+
+Once the initial times of the events have been defined, we also need to declare how events react and affect each other. To do so, we use the `evt_react_list` object and the `add_reactevt` function. This function just needs to state which event is affected, and the actual reaction (usually setting flags to 1 or 0, or creating new/adjusting events).
+
+There are a series of objects that can be used in this context to help with the reactions. Apart from the global objects and flags defined above, we can also use `curtime` for the current event time, `prevtime` for the time of the previous event, `cur_evtlist` for the named vector of events that is yet to happen for that patient, trt for the current treatment in the loop, `evt` for the current event being processed, `i` expresses the patient iteration, and `simulation` the specific simulation (relevant when the number of simulations is greater than 1). Furthermore, one can also call any other input/item that has been created before or create new ones. For example, we could even modify a cost/utility item by changing it directly, e.g. through `modify_item(list(cost.idfs.tx=500))`.
+
+At this place, a Table is rendered in the HTML version of the tutorial.
+In this document, Tables are automatically numbered and cross-referenced. For this
+to work, the R-code chunk need to have a:
+
+- *unique* name (avoid underscores `_`)
+- the table needs to have a caption, passed in the `kintr::kable()` option.
+
+Table \@ref(tab:tab-1) below shows a standard output with a pre-specified 
+theme form the package **kableExtra** (Version `r packageVersion("kableExtra")`).[@bookdown2016]
+
+
+```{r tab-1, echo=TRUE}
+tab1 <- openxlsx::read.xlsx(xlsxFile = here::here("raw/table1.xlsx"),
+                            sheet = "table1")
+
+knitr::kable(x = tab1,
+             col.names = c("Item", "What does it do"),
+             caption = "Table without caption in original tutorial") %>% 
+        kableExtra::kable_classic() 
+```
+
+The problem with rendering tables in that way it that they sometimes do not
+render at the exact place where you want them. Also, they don't look very nice
+and when they are wide, they don't fit.
+
+Below I share two functions (after a lot of trial and error) that work quite well
+for both HTML and PDF output. Feel free to use and re-use:
+
+```{r fkbl, echo=T}
+# A wrapper for the kintr::kable() function
+fkbl <- function (df,
+                  digi = 2,
+                  big_mark = TRUE,
+                  col.names = names(df),
+                  ...) 
+{
+        require("dplyr")
+        require("kableExtra")
+        if (knitr::pandoc_to("docx")) {
+                df %>%
+                        flextable::flextable() %>%
+                        flextable::colformat_double(x = .,
+                                                    big.mark = ifelse(
+                                                            big_mark,
+                                                            ",",
+                                                            ""),
+                                                    digits = digi
+                        )
+        } else {
+                df %>%
+                        kableExtra::kbl(col.names = col.names,
+                                        digits = digi,
+                                        booktabs = TRUE,
+                                        linesep = "",
+                                        format.args = list(
+                                                big.mark = ifelse(big_mark,
+                                                                  ",",
+                                                                  "")
+                                                ),
+                                        ...)
+        }
+}
+```
+
+```{r fkblextra, echo=T}
+# A wrapper for kable::Extra::kable_styling()
+
+fkbl_style <- function(fkbl,
+                       scale = FALSE,
+                       boots_opts = c("striped",
+                                      "condensed",
+                                      "hover"),
+                       latx_opts = c("striped", "HOLD_position"), ...) 
+{
+        require("kableExtra")
+        if (knitr::pandoc_to("docx")) {
+                fkbl
+        }
+        else {
+                fkbl %>% kableExtra::kable_styling(
+                        bootstrap_options = boots_opts, 
+                        latex_options = if (scale) {
+                                c(latx_opts, "scale_down")
+                        }
+                        else {
+                                latx_opts
+                        }, full_width = F, ...) %>%
+                        kableExtra::scroll_box(.,
+                                               width = "100%",
+                                               box_css = "border: 0px;")
+        }
+}
+```
+
+
+
+```{r tab-2, echo = TRUE}
+
+tab1 %>% 
+        fkbl(col.names = c("Item", "What does it do"),
+             caption = "Table without caption in original tutorial2") %>% 
+        fkbl_style(scale = T)
+
+```
+
+
+The functions to add/modify events and inputs use lists. Whenever several inputs/events are added or modified, it’s recommended to group them within one function, as it reduces the computation cost. So rather than use two `modify_item` with a list of one element, it’s better to group them into a single `modify_item` with a list of two elements.
+
+`new_event` allows to generate events and add them to the vector of events. It accepts more than one event. `modify_event` allows to modify events (e.g. delay death). When adding an event, the name of the events and the time of the events must be defined. When using `modify_event`, one must indicate which events are affected and what are the new times of the events. If the event specified does not exist or has already occurred, it will be ignored. Note that one could potentially omit part of the modeling set in `init_event_list` and actually define new events dynamically through the reactions (we do that below for the `"ae"` event). However, this can have an impact in computation time, so if possible it’s always better to use `init_event_list.` `modify_item` allows to modify and add items. Elements defined within this function are not evaluated sequentially (i.e. defining `modify_item(list(fl.new = 1, var1 = fl.new * 5)))` will give an error if `fl.new` was not defined outside this function).
+
+The list of relevant functions to be used within `add_reactevt` are (shown in
+Table \@ref(tab:tab2)):
+
+```{r tab2}
+tab2 <- openxlsx::read.xlsx(xlsxFile = here::here("raw/table1.xlsx"),
+                            sheet = "table2")
+
+tab2 %>% 
+        fkbl(caption = "Another table with no caption",
+             col.names = c("Function", "What does it do", "How to use it")) %>% 
+        fkbl_style(scale = TRUE)
+```
+
+The model will run until `curtime` is set to `Inf`, so the event that terminates the model (in this case, `os`), should modify `curtime` and set it to `Inf.`
+
+```{r}
+evt_react_list <-
+  add_reactevt(name_evt = "sick",
+               input = {}) %>%
+  add_reactevt(name_evt = "sicker",
+               input = {
+                 modify_item(list(fl.sick = 0)) 
+               }) %>%
+  add_reactevt(name_evt = "death",
+               input = {
+                 modify_item(list(curtime = Inf)) 
+               })
+```
+

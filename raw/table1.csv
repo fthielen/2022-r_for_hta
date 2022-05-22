@@ -1,0 +1,7 @@
+"item	what"
+"`curtime`	Current event time (numeric)"
+"prevtime	Time of the previous event (numeric)"
+"cur_evtlist	Named vector of events that is yet to happen for that patient (named numeric vector)"
+"evt	Current event being processed (character)"
+"i	Patient being iterated (character)"
+"simulation	Simulation being iterated (numeric)"

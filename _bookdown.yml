@@ -1,0 +1,13 @@
+book_filename: "220523-thielen-r_for_hta"
+always_allow_html: true
+delete_merged_file: true
+language:
+  ui:
+rmd_files: ["scripts/Rmd/index.Rmd",
+"scripts/Rmd/01-intro.Rmd",
+"scripts/Rmd/02-inputs.Rmd",
+"scripts/Rmd/03-events.Rmd",
+"scripts/Rmd/04-cost_utils.Rmd",
+"scripts/Rmd/05-model.Rmd",
+"scripts/Rmd/06-post.Rmd",
+"scripts/Rmd/refs.Rmd"]

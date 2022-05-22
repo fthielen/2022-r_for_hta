@@ -1,0 +1,987 @@
+---
+title: "Estimating Dutch costs of productivity losses in R using up-to-date data from Statistics Netherlands (CBS) with the R-package cbsodataR <br><br> AND <br><br> Copy and paste code, not output. Writing technical reports of any economic analysis in R with Bookdown"
+author: "Frederick Thielen"
+role: "Assistant professor"
+org: "Erasmus School of Health Policy and Management (Rotterdam, The Netherlands)"
+date: "23 May 2022"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLanguage: ["r", "css", "yaml"]
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+editor_options: 
+  chunk_output_type: inline
+---
+
+name: hello
+class: middle, center, inverse
+
+```{r echo = F, message=FALSE}
+options(scipen = 900, digits = 6)
+
+source(file = here::here("scripts/R/01-load.R"))
+
+# Function to print tables with DT
+dt_p <- function(dat, ...)(
+        DT::datatable(data = dat,
+                      fillContainer = FALSE,
+                      options = list(pageLength = 5,
+                                     #dom = 't',
+                                     scrollX = TRUE,
+                                     scrollCollapse = TRUE),
+                      ...)
+)
+
+```
+
+
+```{css, echo=FALSE}
+.pre {
+  height: 30pc;
+  overflow-y: scroll;
+}
+```
+
+
+
+### `r rmarkdown::metadata$author`, Ph.D.
+
+<img style="border-radius: 50%;" src="https://github.com/fthielen.png" width="150px"/>
+
+### `r rmarkdown::metadata$role`
+
+### `r rmarkdown::metadata$org`
+
+[`r fontawesome::fa("github")` @fthielen](https://github.com/fthielen)    
+[`r fontawesome::fa("twitter")` @apreshill](https://twitter.com/fwthielen)   
+[`r fontawesome::fa("link")` data-fred.com](https://www.data-fred.com)
+
+Slide(s) inspired by [Alison Hill](https://github.com/apreshill/talks/blob/main/agu-panel/index.Rmd)
+
+---
+class: middle, center
+# Hello *R for HTA* world
+
+```{r echo=FALSE, fig.retina=1, out.width="85%"}
+knitr::include_graphics(here::here("images/me.jpg"))
+```
+
+---
+
+# Material
+
+All material presented here can be found on github:
+
+[**github.com/fthielen/2022-r_for_hta**](https://github.com/fthielen/2022-r_for_hta)
+
+
+
+---
+
+class: middle, center, inverse
+background-image: url(https://images.unsplash.com/photo-1652959894563-e815de31350e?crop=entropy&cs=tinysrgb&fm=jpg&ixlib=rb-1.2.1&q=80&raw_url=true&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070)
+
+# Estimating Dutch costs of productivity losses in R using up-to-date data from Statistics Netherlands (CBS) with the R-package cbsodataR
+
+.footnote[Picture taken from Pawel Czerwinski on [unsplash.com](https://unsplash.com/@pawel_czerwinski)]
+---
+class: middle
+background-image: url(https://cdn-icons-png.flaticon.com/512/1946/1946042.png)
+background-position: 95% 5%
+background-size: 5%
+
+# Productivity losses
+
++ When people become sick, they sometime cannot work any more due to the illness
+
+--
+
++ Required for most economic evaluations from a societal perspective (like in NL)
+
+--
+
++ Estimation starts with identifying where and when health-related productivity changes occur [Krol & Brouwer 2014](https://pubmed.ncbi.nlm.nih.gov/24504850/)
+
+--
+
++ The Dutch guideline to conduct economic evaluations in healthcare
+[Dutch EE guideline](https://www.zorginstituutnederland.nl/publicaties/publicatie/2016/02/29/richtlijn-voor-het-uitvoeren-van-economische-evaluaties-in-de-gezondheidszorg) recommends the friction cost method
+
+.footnote[This and all other icons in this presentation are taken from flaticon.com]
+---
+class: middle
+# Example: productivity losses (paid work)
+
+Methodology to calculate the friction period is explained in the Dutch EE guideline:
+
+
+
+
+$$ Friction period = \frac{365}{(\frac{V_f}{V_o})} + 28 $$
+
+--
+
+With:
+- $V_f$ = Vacancies filled
+- $V_o$ = Vacancies open
+
+---
+
+# Method
+
+- is fixed
+
+- relies on data from Statistics Netherlands (CBS)
+
+--
+
+- Estimates in the Dutch EE guideline are mentioned but old: reference year is 2014 (85 days = 12.1 wks)
+
+- is only the first step to determine productivity losses:
+
+   - at least productivity prices are needed
+
+   - maybe female/male ratio important
+
+   - maybe percentage working per age group needed
+   
+   - productivity losses for unpaid work may be relevant
+
+--
+
+**The friction period and all other elements need to be re-calculated for the year of the analysis!**
+
+---
+class: middle
+background-image: url(https://cdn-icons-png.flaticon.com/512/1046/1046277.png)
+background-position: 95% 5%
+background-size: 5%
+
+# The "classic" approach?
+
+One possibility is to:
+
+- download CBS data
+
+- perform calculation (maybe using some old Excel formulas from another project)?
+
+--
+
+A downside:
+
+- time consuming
+
+- probably much copy/paste from downloaded data
+
+- what if projects takes long(er) than expected and updates are necessary?
+
+---
+class: middle
+background-image: url(https://cdn-icons.flaticon.com/png/512/2930/premium/2930685.png?token=exp=1653257651~hmac=86e5b1b22d351a6337c9ef823e891f1b
+background-position: 95% 5%
+background-size: 5%
+
+# The Rpproach
+
+Another possibility is to:
+
+- standardise the standard approach (write a function)
+
+- automatically download CBS data from CBS servers
+
+- only keep what you need
+
+- build in flexibility (e.g., updates when needed)
+
+--
+
+How to:
+
+- use existing packages
+
+- write a function
+
+- use it
+
+---
+
+# R packages from national statistics bureaus
+
+- The Netherlands: **cbsodataR**
+
+- Canada: **cansim**, **StatCanR**
+
+- Germany: **wiesbaden**
+
+- ...
+
+---
+background-image: url(https://cdn-icons-png.flaticon.com/512/1534/1534999.png)
+background-position: 95% 50%
+background-size: 25%
+
+# Example: calculating the friction period for the Netherlands
+
+Several steps:
+
+1. Identify needed data source
+
+--
+
+2. Download data
+  - Not every time code runs (save time)
+  - Build in flexibility (possible updates, re-use of code)
+
+--
+
+3. Do calculations
+
+--
+
+4. Put everything in a function
+
+--
+
+5. Use & re-use
+
+---
+
+# Step 1: data sources
+
+All data can be found and searched on the CBS website or via Google:
+
+- each data source has a specific identifier
+
+--
+
+Example: numer of job vacancies since 2008
+
+- https://www.cbs.nl/nl-nl/cijfers/detail/80472ned
+
+Identifier is: 80472ned
+
+---
+
+# Step 1: data sources
+
+Available data can also be browsed through a catalogue retrievable in the R package.
+
+Also refer to the package site on [github](https://github.com/edwindj/cbsodataR)
+
+```{r cbs-browse, cache.lazy=TRUE}
+# Load package (do not forget to install first)
+library("cbsodataR")
+
+res <- cbsodataR::cbs_search(query = "vacature")
+
+```
+
+---
+# Step 1: data sources
+
+```{r, highlight.output=1}
+res[, c("Identifier", "Title")] %>% 
+        dt_p
+```
+
+---
+
+# Step 2: Download data
+
+Download with function `cbs_get_data()` (from cbsodataR package):
+
+```{r}
+df_vacancy <- cbsodataR::cbs_get_data("80472ned") 
+```
+
+--
+
+Downside:
+
+- downloads every time code runs
+  - is time (and energy) consuming
+  
+- probably not needed since updates are not that frequent (yearly)
+
+---
+
+# Download, store and update (when necessary)
+
+- define a folder where CBS data should be stored (recommendation: "CBS" in "raw")
+
+--
+
+- integrate the year in the file name
+
+- store as `.RDS` file
+
+```{r download}
+
+dir_path <- paste0("raw/CBS/")
+
+dir_path
+
+file_name <- paste0(
+        lubridate::year(Sys.Date()),
+        "-raw_friction_period.RDS")
+
+file_name
+```
+
+---
+
+# Download, store and update (when necessary)
+
+- create the directory when needed?
+
+```{r create-dir}
+if (!dir.exists(here::here(dir_path))) dir.create(here::here(dir_path),
+                                                             recursive = TRUE)
+```
+
+--
+
+```{r store-data}
+saveRDS(object = df_vacancy, file = here::here(paste0(dir_path, "/", file_name)))
+```
+
+---
+
+# Write first part of function
+.pre[
+```{r fun-first}
+f_cbs_friction_period <- function(
+                folder_name = "raw/CBS",
+                file_name = "-raw_friction_period.RDS",
+                force_download = FALSE
+){
+        # Required libraries ----
+        require("here")
+        require("cbsodataR")
+        require("lubridate")
+        
+        # Download and update ----
+        dir_path <- folder_name
+        file_path <- paste0(
+                lubridate::year(Sys.Date()),
+                file_name)
+        full_path <- paste0(dir_path, "/", file_path)
+        
+         # Create directory if not existing
+        if (!dir.exists(here::here(dir_path))) 
+                dir.create(here::here(dir_path),
+                                      recursive = TRUE)
+
+        # Download data
+        if (force_download | !file.exists(here::here(full_path))) {
+                df_vacancy <- cbsodataR::cbs_get_data("80472ned")
+                saveRDS(df_vacancy, file = here::here(full_path))
+                } else {
+                        df_vacancy <- readRDS(here::here(full_path))
+                }
+        
+        df_vacancy <<- df_vacancy #<<
+}
+```
+]
+---
+
+# Step 3: calculations
+
+## First: inspect data
+
+.pre[
+```{r inspect}
+head(df_vacancy)
+```
+]
+---
+
+# Step 3: calculations
+
+- some variables are "cryptic"
+
+- dates are not stored as date/time variables
+
+---
+# Step 3: calculations
+
+- `cbsodataR::cbs_add_label_columns()` and `cbsodataR::cbs_add_date_column()` can fix this
+
+.pre[
+```{r add-labs}
+df_vacancy %>% 
+      cbsodataR::cbs_add_label_columns() %>% 
+        cbsodataR::cbs_add_date_column() %>% 
+        head()
+```
+]
+
+---
+# Step 3: calculations
+
+## What data are relevant?
+
+- interested in yearly average = `Perioden_freq` == `Y`
+
+- several industry sectors available:
+
+---
+
+```{r}
+df_vacancy %>% 
+      cbsodataR::cbs_add_label_columns() %>% 
+        cbsodataR::cbs_add_date_column() %>% 
+        distinct(Bedrijfskenmerken, Bedrijfskenmerken_label) %>% 
+        dt_p()
+```
+
+---
+## Filter and calculate
+
+```{r all-yrs, eval=F}
+df_vacancy %>% 
+        cbsodataR::cbs_add_label_columns() %>% 
+        cbsodataR::cbs_add_date_column() %>% 
+        filter(Perioden_freq == "Y",
+               Bedrijfskenmerken %in% c("T001081")) %>%
+        mutate(Year = lubridate::year(Perioden_Date),
+               Friction_period_days = 362 /
+                       (VervuldeVacatures_3 /
+                                OpenstaandeVacatures_1) +
+                       28,
+               Friction_period_wks = Friction_period_days / 7) %>% 
+        distinct(Year,
+                 VervuldeVacatures_3,
+                 OpenstaandeVacatures_1,
+                 Friction_period_days,
+                 Friction_period_wks) %>%
+        rename(Filled_vacancies = "VervuldeVacatures_3",
+               Open_vacancies = "OpenstaandeVacatures_1")
+```
+
+---
+## Filter and calculate
+
+```{r all-yrs-p, echo=F}
+df_vacancy %>% 
+      cbsodataR::cbs_add_label_columns() %>% 
+        cbsodataR::cbs_add_date_column() %>% 
+         filter(Perioden_freq == "Y",
+                       Bedrijfskenmerken %in% c("T001081")) %>% #<<
+          mutate(
+                  Year = lubridate::year(Perioden_Date),
+                  Friction_period_days = 362 /
+                                (VervuldeVacatures_3 / OpenstaandeVacatures_1) +
+                                28,
+                        Friction_period_wks = Friction_period_days / 7) %>% 
+        distinct(
+                        Year,
+                        VervuldeVacatures_3,
+                        OpenstaandeVacatures_1,
+                        Friction_period_days,
+                        Friction_period_wks
+                ) %>%
+        rename(Filled_vacancies = "VervuldeVacatures_3",
+                       Open_vacancies = "OpenstaandeVacatures_1") %>% 
+        round(2) %>% 
+        dt_p
+```
+
+---
+
+# Step 4: put everything in a function
+
+## Define some function arguments:
+
+- `years`: Year(s) of interest
+
+- `industry`: most likely "all", but define for flexibility
+
+- `folder_name`: set a standard, but define for flexibility
+
+- `file_name`: set a standard, but define for flexibility
+
+- `force_download`: jsut to be sure
+
+- `yearsdays`: 365 in formula but most often 365.25
+
+---
+.pre[
+```{r function-complete}
+f_cbs_friction_period <- function(
+                years,
+                industry = "T001081",        
+                folder_name = "raw/CBS",
+                file_name = "-raw_friction_period.RDS",
+                force_download = FALSE,
+                yeardays = 365){
+        
+        # Required libraries ----
+        require("here")
+        require("cbsodataR")
+        require("lubridate")
+        
+        # Download and update ----
+        dir_path <- folder_name
+        file_path <- paste0(
+                lubridate::year(Sys.Date()),
+                file_name)
+        full_path <- paste0(dir_path, "/", file_path)
+        
+        # Create directory if not existing
+        if (!dir.exists(here::here(dir_path))) 
+                dir.create(here::here(dir_path),
+                           recursive = TRUE)
+        
+        # Download data
+        if (force_download | !file.exists(here::here(full_path))) {
+                df_vacancy <- cbsodataR::cbs_get_data("80472ned")
+                saveRDS(df_vacancy, file = here::here(full_path))
+        } else {
+                df_vacancy <- readRDS(here::here(full_path))
+        }
+        
+        # Calculate ----
+        df_vacancy %>% 
+                cbsodataR::cbs_add_label_columns() %>% 
+                cbsodataR::cbs_add_date_column() %>% 
+                filter(Perioden_freq == "Y",
+                       Bedrijfskenmerken %in% industry) %>% 
+                mutate(
+                        Year = lubridate::year(Perioden_Date),
+                        Friction_period_days = yeardays /
+                                (VervuldeVacatures_3 / OpenstaandeVacatures_1) +
+                                28,
+                        Friction_period_wks = Friction_period_days / 7) %>% 
+                distinct(
+                        Year,
+                        VervuldeVacatures_3,
+                        OpenstaandeVacatures_1,
+                        Friction_period_days,
+                        Friction_period_wks
+                ) %>%
+                rename(Filled_vacancies = "VervuldeVacatures_3",
+                       Open_vacancies = "OpenstaandeVacatures_1") %>% 
+                filter(Year %in% years)
+        
+}
+```
+]
+
+---
+
+# Step 5: Use & re-use
+
+```{r}
+df_friction <- f_cbs_friction_period(years = 2011:2021)
+
+df_friction %>%
+        dt_p
+```
+
+---
+
+# Sidestep: plot
+
+```{r, fig.height=5, fig.width=10}
+ggplot(data = df_friction, aes(x = Year, y = Friction_period_wks)) +
+        geom_point() +
+        theme_light()
+```
+
+---
+
+# And now?
+
+- friction period = maximum days to account for productivity losses
+
+- In 2021: `r round(df_friction$Friction_period_days[df_friction$Year == 2021])` days
+
+- Productivity costs per hour: 34.75 Euro (2014, average female/male, Dutch EE guideline [see Table 6.2])
+
+  - same price still used in many publications
+  
+  - should be indexed with consumer price index (CPI, table ID: "83131NED") or with price
+  index work (table ID: "84183NED")?
+
+---
+
+# Example
+
+Keeping all other variables the same as in the Dutch EE guideline example (Example 9):
+
+- Person with 3 days of work
+
+- 8 hours per day
+
+- 34.75 Euro per hour
+
+--
+
+```{r}
+# Note: the results fetched from CBS are 12.2 weeks due to rounding
+prod_loss14 <- round(12.1 * 3 * 8 * 34.75, 2) 
+
+prod_loss21 <- round(
+        df_friction$Friction_period_wks[
+                df_friction$Year == 2021] * 3 * 8 * 34.75, 2)
+```
+
+- In 2014: `r prod_loss14` Euro
+
+- In 2021: `r prod_loss21` Euro
+
+
+---
+class: middle
+background-image: url(https://cdn-icons-png.flaticon.com/512/5247/5247524.png)
+background-position: 95% 5%
+background-size: 5%
+
+# Take home message
+
+- **cbsodataR** is a powerful package do download data from CBS
+
+- downloading all data every time can be time consuming
+
+- writing you own function for this task makes the approach verifyable and re-usable
+
+- Not covered: putting these function in your own *package* makes it even more flexible
+
+--
+
+Estimating costs of productivity losses
+
+- can be fun
+
+- but we need to consider more than just resource use (proportion female/male, unpaid work etc.)
+
+---
+class: middle, center, inverse
+background-image: url(https://images.unsplash.com/photo-1651870364199-fc5f9f46ac85?ixlib=rb-1.2.1&raw_url=true&q=80&fm=jpg&crop=entropy&cs=tinysrgb&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470)
+
+# Writing technical reports in R with **bookdown**
+
+.footnote[Picture taken from Pawel Czerwinski on [unsplash.com](https://unsplash.com/@pawel_czerwinski)]
+---
+
++ Aim: get you started with bookdown without knowing much about the technicalities
+
+--
+
++ Approach: trial and (lots of) error = personal view
+
+--
+
++ Downside: high level of frustration, things can take a while, high level of happiness if it works
+
+---
+background-image: url(https://cdn-icons-png.flaticon.com/512/627/627495.png)
+background-position: 95% 50%
+background-size: 25%
+# What you need
+
+- R
+
+- R Studio
+
+- Some knowledge of (R)Markdown
+
+- Zotero, if you want to add references
+
+---
+
+# Why bookdown and not only (R)markdown?
+
+Advantages over (R)markdown - to me
+
+- Demands more structure (chapter sequences)
+
+- Automatic cross-referencing of Figures
+
+- Automatic cross-referencing of Tables
+
+- Render a HTML to share and include a PDF file to download
+
+- Many different styles available that are customisable
+
+---
+
+# How to bookdown?
+
+- most comprehensive guide: [*bookdown: Authoring Books and Technical Documents with R Markdown*](https://bookdown.org/yihui/bookdown/)
+
+--
+
+- after installation of package **bookdown**: File > New Project... > New directory > Book project using bookdown
+
+  - great for first steps
+  - creates quite some files you probably don't need
+  
+---
+
+# What is covered in this presentation?
+
+- brief overview of most important files needed to *bookdown*
+
+--
+
+- proposal for folder structure
+
+--
+
+- some basics for your YAML (including `_bookdown.yml`) and `preamble.tex`
+
+--
+
+- printing nice tables (flexible for PDF and HTML output)
+
+--
+
+- adding citations with Zotero
+
+---
+background-image: url(https://cdn-icons-png.flaticon.com/512/1534/1534999.png)
+background-position: 95% 50%
+background-size: 25%
+
+# Steps in creating your project with bookdown
+
+1. Folder structure to keep overview
+
+--
+
+2. Set-up your citations (both literature and R-packages)
+
+--
+
+3. Tweak your `_bookdown.yml` and `preamble.tex`
+
+--
+
+4. Write (code and text)
+
+--
+
+5. Render
+
+---
+
+# Step 1: folder structure
+
+## Proposed folder structure:
+
+```{r folders, echo = F}
+# Taken from: https://stackoverflow.com/questions/36094183/how-to-build-a-dendrogram-from-a-directory-tree
+
+path <- c(
+    "rprojecthome/_book", 
+    "rprojecthome/raw",
+    "rprojecthome/data",
+    "rprojecthome/images",
+    "rprojecthome/scripts/R",
+    "rprojecthome/references/zotero.bib",
+    "rprojecthome/references/packages.bib",
+    "rprojecthome/references/nature.csl",
+    "rprojecthome/scripts/Rmd"
+)
+
+x <- lapply(strsplit(path, "/"), function(z) as.data.frame(t(z)))
+x <- rbind.fill(x)
+x$pathString <- apply(x, 1, function(x) paste(trimws(na.omit(x)), collapse="/"))
+
+mytree <- data.tree::as.Node(x)
+
+mytree
+```
+
+---
+
+# What do these folders contain?
+
+- `_book`: automatically generated by **bookdown** and will contain the PDF or HTML book
+
+- `raw`: some raw data needed for the project
+
+- `data`: clean/[tidy](https://r4ds.had.co.nz/tidy-data.html) data
+
+- `images`: all images/figure/charts/graphs exported from your project (not for your report)
+
+- `scripts`: all R or RMarkdown scripts (or other) needed for the analysis
+
+- `references`: literature and package references (HOW TO? covered in this presentation)
+
+---
+
+# Step 2: set-up citations (references)
+
+- works best with [Zotero](https://www.zotero.org)
+
+- needs extension **Better BibTeX (BBT)**
+
+--
+
+**BBT:**
+
+- generates "Citation Keys", needed to refer to citation in `.Rmd`
+
+  - Citation Keys can be customised: Zotero > Preferences > Better BibTex
+
+--
+
+- makes it easy to export "live" `.bib` files
+
+  - Right click library > Export Library... > Format "Better BibTeX > Select: "Keep updated"
+  
+  - Choose Rproject > references
+
+---
+
+# Step 2: set-up citations (R-packages)
+
+- after loading the packages:
+
+```{r eval=FALSE}
+knitr::write_bib(file = here::here("references/packages.bib"))
+```
+
+- generates a `.bib` file with package references in specified folder
+
+---
+
+# Step 2: set-up citations (styles)
+
+- citation style based on CSL (Citation Style Language)
+
+- best to use [Zotero Style Repository](https://www.zotero.org/styles) to search and download `.csl` file
+
+--
+
+- put `.csl` file in you Rproject folder **references**
+
+- more information in the [R Markdown Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/bibliography.html#changing-citation-style)
+
+---
+
+# Step 3: tweak your YAML
+
+- "meta-data" of your book
+
+- contains information on
+
+  - Author(s)
+  
+  - Date
+  
+  - How *Table of Contents* looks like (i.e., how many levels are shown)
+  
+  - Font sizes
+  
+  - "Geometry" of document
+  
+  - Citations and citation styles
+
+--
+
+- Can be extensive
+
+- Information can be (partly) stored in `_bookdown.yml`
+
+- Understands "R" but does not always work for me (e.g., using **here**)
+
+---
+
+# Step 3: tweak your YAML
+
+- needs to be at very start of document (i.e., first `.Rmd` that will be rendered)
+
+- important to keep (explained later):
+
+```{r warning=FALSE, echo=F}
+knitr::include_graphics(here::here("images/yml_must1.jpg"))
+```
+
+---
+
+# Step 3: tweak your YAML (_bookdown.yml)
+
+In `_bookdown.yml`:
+
+- specify document name: `book_filename:`
+
+- determine sequence of `.Rmd` files to be rendered: `rmd_files:`
+
+---
+
+# Step 3: tweak your preamble.tex
+
+- More specific LaTeX code lives here
+
+- LaTeX works with packages (like R)
+
+--
+
+- Important/useful not standard packages:
+
+  - **longtable** for tables over several pages
+  
+  - **lastpage** to count pages numbers as e.g., 1 of 29
+  
+  - **lscape** for easy landscape pages
+  
+  - **float** to keep figures in place
+  
+  - **fancyhdr** for document headers
+  
+- activation of packages with `\usepackage{longtable}`
+
+---
+
+# Step 4: write your report
+
+## Start writing you analyses and report in /Rmd folder
+
+- A typical report contains multiple chapters
+
+- Start with creating one .Rmd per chapter and use distinct names
+
+- Finish with one chapter for the references
+
+--
+
+- Recommendation:
+
+  - `# Preface {-}`
+  - `# Introduction`
+  - `# Chapter 1`
+  - `...`
+  - `# Chapter n`
+  - `# References`
+
+---
+# Some lessons I have learned
+
+- Do not use `_` to name chunks, use `-` instead
+
+- Restart R-session before your compile/render your report.
+  - I often get an error if I don't: "! Undefined control sequence. <recently read> \cellcolor"
+
+
+---
+
+# Usefull resources and further reading
+
+- [Meet boodkown](https://arm.rbind.io/slides/bookdown.html#1)
+
+- [Reproducible Science for Busy Researchers: How to Save Time using Literate Programming](https://bookdown.org/alapo/learnr/)
+
+- [Introduction to bookdown (video)](https://www.rstudio.com/resources/webinars/introducing-bookdown/)
+
+- [A minimal book example](https://benmarwick.github.io/bookdown-ort/) and especially the "Open Review" section
+
+- [rstudio4edu](https://rstudio4edu.github.io/rstudio4edu-book/index.html)

@@ -1,0 +1,34 @@
+# Costs and Utilities
+
+Costs and utilities are introduced below. However, it’s worth noting that the model is able to run without costs or utilities.
+
+## Utilities
+
+Utilities are defined using pipes with the `add_util` function. The first argument says which events are affected, the second argument which treatments are affected, and the third one describe the utilities. Instant utilities (e.g. AE disutilities) and cycle utilities can be defined in a similar fashion. Note that one can write expressions and objects whose execution will be delayed until the model runs.
+
+```{r echo=TRUE}
+util_ongoing <- add_util(evt = c("sick", "sicker","death"),
+                         trt = c("int", "noint"),
+                         util = util.sick * fl.sick +
+                                 util.sicker * (1-fl.sick)
+)
+```
+
+## Costs
+
+Costs are defined using pipes with the `add_cost` function, in a similar fashion to the utilities.
+
+```{r echo=TRUE}
+cost_ongoing <-
+        add_cost(
+                evt = c("sick", "sicker","death") ,
+                trt = "noint",
+                cost = cost.sick * fl.sick +
+                        cost.sicker * (1-fl.sick) ) %>%
+        add_cost(
+                evt = c("sick", "sicker","death") ,
+                trt = "int",
+                cost = cost.sick * fl.sick + cost.sicker * (1-fl.sick) +
+                        cost.int * fl.sick ) 
+```
+
