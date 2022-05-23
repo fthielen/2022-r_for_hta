@@ -57,7 +57,7 @@ dt_p <- function(dat, ...)(
 ### `r rmarkdown::metadata$org`
 
 [`r fontawesome::fa("github")` @fthielen](https://github.com/fthielen)    
-[`r fontawesome::fa("twitter")` @apreshill](https://twitter.com/fwthielen)   
+[`r fontawesome::fa("twitter")` @fwthielen](https://twitter.com/fwthielen)   
 [`r fontawesome::fa("link")` data-fred.com](https://www.data-fred.com)
 
 Slide(s) inspired by [Alison Hill](https://github.com/apreshill/talks/blob/main/agu-panel/index.Rmd)
